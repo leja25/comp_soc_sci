@@ -4,14 +4,20 @@ import os
 import pandas as pd
 import networkx as nx
 
+#Question for Quentin - why are deputes seemingly being associated with parties that they aren't part of? Eg Jérémie Iordanoff, PA794022,
+#is an ecologiste but in the other parties list it seems he is also associated with Libertés, Indépendants, Outre-mer et Territoires and
+#Non inscrit
+
 os.chdir(r"c:/Users/lily_/OneDrive/Documents/Masters/S2/Computational_Social_Science/comp_soc_sci/data_and_code")
 
 #use glob to get xml files. store as variable paths
 bills = glob.glob("scrutins.xml/*")
+orgs = glob.glob("acteurs_mandats_organes.xml/organe/*")
 
-link = r"{http://schemas.assemblee-nationale.fr/referentiel}" #Question for Quentin - why is there this link before the child name every time?
+link = r"{http://schemas.assemblee-nationale.fr/referentiel}"
 
-#Just some code to count how many instances of each code there are under the type vote child across the whole dataset, and see how this relates to the named type of vote
+#Just some code to count how many instances of each code there are under the type vote child across the whole dataset, and see how this relates
+#to the named type of vote
 
 #code_votes = []
 #type_votes = []
@@ -32,7 +38,7 @@ bills_2023_25pc = []
 for bill in bills:
     tree = et.parse(bill)
     root = tree.getroot()
-    if int(root.find(f".//{link}nombreVotants").text) >= 144 and root.find(f"{link}dateScrutin").text[:4] == "2023":
+    if int(root.find(f".//{link}nombreVotants").text) >= 400 and root.find(f"{link}dateScrutin").text[:4] == "2023": #CHANGE THE 400 BACK TO 144
         bills_2023_25pc.append(bill)
 
 G = nx.Graph()
@@ -50,8 +56,8 @@ def edge_adder(l):
 #the for loop to end all for loops
 for bill in bills_2023_25pc:
 
-    tree_bill = et.parse(bill)
-    root_bill = tree_bill.getroot()
+    #tree_bill = et.parse(bill)
+    root_bill = et.parse(bill).getroot()
 
     ayes_ids = []
     noes_ids = []
@@ -73,18 +79,25 @@ for bill in bills_2023_25pc:
         for no in noes_elements:
             noes_ids.append(no.text)
 
-        #adding new deputes as nodes with their party reference as an attribute
+        #adding new deputes as nodes with their party and name as attributes
         deps = ayes_ids + noes_ids
-        for dep in deps: #could probably add name attribute here
-            if dep not in G:
-                G.add_node(dep, party = group_ref)
+        for dep in deps: #for each depute that voted on this bill
+            root_party = et.parse(f"acteurs_mandats_organes.xml/organe/{group_ref}.xml").getroot()
+            party_name = root_party.find(f".//{link}libelle").text
+            if dep in G: #checking if the depute switched parties
+                if party_name not in G.nodes[dep]["parties"]:
+                    G.nodes[dep]["parties"].append(party_name)
+            else: #adding new deputes
+                root_dep = et.parse(f"acteurs_mandats_organes.xml/acteur/{dep}.xml").getroot()
+                name = root_dep.find(f".//{link}prenom").text + " " + root_dep.find(f".//{link}nom").text
+                party = [party_name]
+                G.add_node(dep, parties = party, name = name)
  
     #adding edges between deputes that voted the same way on the bill
     edge_adder(ayes_ids)
     edge_adder(noes_ids)
 
-
-print(nx.get_node_attributes(G, "party"))
+print(list(set(nx.get_node_attributes(G, "party").values()))) #getting a list of the parties
 
 print(len(G.nodes))  #erm, slighty concerning that the number of nodes is 589 even though there are 577 deputes in the assemblee -
                      #but turns out there were 7 by-elections in 2023, so 7 old deputes and 7 new ones, meaning a total of 591 deputes
@@ -92,3 +105,13 @@ print(len(G.nodes))  #erm, slighty concerning that the number of nodes is 589 ev
 
 print(len(G.edges))
 
+Jio = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Jiovanny William']
+Jer = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Jérémie Iordanoff']
+Lis = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Lisa Belluco']
+
+print("Jiovanny William: ", Jio)
+print("Parties ", G.nodes[Jio[0]]["parties"])
+print("Jérémie Iordanoff: ", Jer)
+print("Parties ", G.nodes[Jer[0]]["parties"])
+print("Lisa Belluco: ", Lis)
+print("Parties ", G.nodes[Lis[0]]["parties"])
