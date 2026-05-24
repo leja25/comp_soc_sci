@@ -1,14 +1,11 @@
 import glob
 import xml.etree.ElementTree as et
 import os
-import pandas as pd
 import networkx as nx
 
 #Question for Quentin - why are deputes seemingly being associated with parties that they aren't part of? Eg Jérémie Iordanoff, PA794022,
 #is an ecologiste but in the other parties list it seems he is also associated with Libertés, Indépendants, Outre-mer et Territoires and
 #Non inscrit
-
-os.chdir(r"c:/Users/lily_/OneDrive/Documents/Masters/S2/Computational_Social_Science/comp_soc_sci/data_and_code")
 
 #use glob to get xml files. store as variable paths
 bills = glob.glob("scrutins.xml/*")
@@ -41,7 +38,10 @@ for bill in bills:
     if int(root.find(f".//{link}nombreVotants").text) >= 400 and root.find(f"{link}dateScrutin").text[:4] == "2023": #CHANGE THE 400 BACK TO 144
         bills_2023_25pc.append(bill)
 
+
+
 G = nx.Graph()
+
 
 #function to add edges between all items in a list with a weight of one, or if an edge already exists increase the weight by one
 def edge_adder(l):
@@ -71,20 +71,23 @@ for bill in bills_2023_25pc:
         #getting all those voting 'for' and 'against
         ayes_elements = group.findall(f".//{link}pours//{link}acteurRef")
         noes_elements = group.findall(f".//{link}contres//{link}acteurRef")
-
+        
         #adding deputes to the ayes and noes list for this bill
+        #adding new deputes as nodes with their party and name as attributes
+        deps = []
         for aye in ayes_elements:
+            deps.append(aye.text)
             ayes_ids.append(aye.text)
-
         for no in noes_elements:
+            deps.append(no.text)
             noes_ids.append(no.text)
 
-        #adding new deputes as nodes with their party and name as attributes
-        deps = ayes_ids + noes_ids
         for dep in deps: #for each depute that voted on this bill
             root_party = et.parse(f"acteurs_mandats_organes.xml/organe/{group_ref}.xml").getroot()
             party_name = root_party.find(f".//{link}libelle").text
-            if dep in G: #checking if the depute switched parties
+            if dep in G:
+                #checking if the depute switched parties. It seems that they are very few people who did,
+                # so for now we don't exclude them and use their main party
                 if party_name not in G.nodes[dep]["parties"]:
                     G.nodes[dep]["parties"].append(party_name)
             else: #adding new deputes
