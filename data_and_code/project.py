@@ -9,7 +9,7 @@ from collections import Counter
 #Non inscrit
 
 #use glob to get xml files. store as variable paths
-bills = glob.glob("scrutins_XV.xml/*")
+bills = glob.glob("scrutins_XVI.xml/*")
 orgs = glob.glob("acteurs_mandats_organes.xml/organe/*")
 
 link = r"{http://schemas.assemblee-nationale.fr/referentiel}"
@@ -30,15 +30,15 @@ link = r"{http://schemas.assemblee-nationale.fr/referentiel}"
 #print(pd.DataFrame(type_votes).value_counts())
 
 #the bills_2023 list contains only bills from 2023
-bills_2022_23 = []
+bills_session = []
 
 for bill in bills:
     tree = et.parse(bill)
     root = tree.getroot()
-    if int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) >= 201708 and int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) <= 201806: #CHANGE THE 400 BACK TO 144  (or maybe 0?)
-        bills_2022_23.append(bill)
+    if int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) >= 202308 and int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) <= 202406: #CHANGE THE 400 BACK TO 144  (or maybe 0?)
+        bills_session.append(bill)
 
-print("number bills: ", len(bills_2022_23))
+print("number bills: ", len(bills_session))
 
 G = nx.Graph()
 
@@ -59,7 +59,7 @@ def edge_adder(l, attr):
 
 bills_count = 0
 #the for loop to end all for loops
-for bill in bills_2022_23:
+for bill in bills_session:
 
     root_bill = et.parse(bill).getroot()
 
@@ -107,7 +107,7 @@ for bill in bills_2022_23:
     edge_adder(noes_ids, "co_vote")
 
     bills_count += 1
-    print("bills processed: ", bills_count, "/", len(bills_2022_23))
+    print("bills processed: ", bills_count, "/", len(bills_session))
 
 #adding the party that a depute voted with the most as their main party attribute
 for dep in list(G):
@@ -136,6 +136,6 @@ print(len(G.nodes))  #erm, slighty concerning that the number of nodes is 589 ev
 
 print(len(G.edges))
 
-nx.write_gexf(G, "network_17_18.gexf")
+nx.write_gexf(G, "network_23_24.gexf")
 
 #only 470 bills in 2021/2022?
