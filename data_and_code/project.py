@@ -9,7 +9,7 @@ from collections import Counter
 #Non inscrit
 
 #use glob to get xml files. store as variable paths
-bills = glob.glob("scrutins.xml/*")
+bills = glob.glob("scrutins_XV.xml/*")
 orgs = glob.glob("acteurs_mandats_organes.xml/organe/*")
 
 link = r"{http://schemas.assemblee-nationale.fr/referentiel}"
@@ -30,15 +30,15 @@ link = r"{http://schemas.assemblee-nationale.fr/referentiel}"
 #print(pd.DataFrame(type_votes).value_counts())
 
 #the bills_2023 list contains only bills from 2023
-bills_2023 = []
+bills_2022_23 = []
 
 for bill in bills:
     tree = et.parse(bill)
     root = tree.getroot()
-    if root.find(f"{link}dateScrutin").text[:4] == "2023": #CHANGE THE 400 BACK TO 144  (or maybe 0?)
-        bills_2023.append(bill)
+    if int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) >= 201708 and int(root.find(f"{link}dateScrutin").text[:4] + root.find(f"{link}dateScrutin").text[5:7]) <= 201806: #CHANGE THE 400 BACK TO 144  (or maybe 0?)
+        bills_2022_23.append(bill)
 
-print("number bills: ", len(bills_2023))
+print("number bills: ", len(bills_2022_23))
 
 G = nx.Graph()
 
@@ -59,7 +59,7 @@ def edge_adder(l, attr):
 
 bills_count = 0
 #the for loop to end all for loops
-for bill in bills_2023:
+for bill in bills_2022_23:
 
     root_bill = et.parse(bill).getroot()
 
@@ -107,7 +107,7 @@ for bill in bills_2023:
     edge_adder(noes_ids, "co_vote")
 
     bills_count += 1
-    print("bills processed: ", bills_count, "/", len(bills_2023))
+    print("bills processed: ", bills_count, "/", len(bills_2022_23))
 
 #adding the party that a depute voted with the most as their main party attribute
 for dep in list(G):
@@ -124,13 +124,11 @@ for node in G:
 
 #calculating proportion of times deputes voted the same way on a bill, out of the number of times they both voted on a bill
 for dep1, dep2, attrs in G.edges.data():
-    #if "co_vote" not in G[dep1][dep2].keys():
-    #    G[dep1][dep2]["co_vote"] = 0 
     G[dep1][dep2]["prop_covote"] = attrs.get("co_vote", 0)/attrs.get("both_vote") #the , 0 assigns the value of co_vote to 0 if it doesn't already exist
 
 #removing edges with a prop co-vote weighting of 0. sadly cannot do that in prev loop as it affects the length of G.edges.data()
-edges_to_remove = [(n1, n2) for n1, n2, attrs in G.edges.data() if attrs.get("prop_covote")==0]
-G.remove_edges_from(edges_to_remove)
+#edges_to_remove = [(n1, n2) for n1, n2, attrs in G.edges.data() if attrs.get("prop_covote")==0]
+#G.remove_edges_from(edges_to_remove)
 
 print(len(G.nodes))  #erm, slighty concerning that the number of nodes is 589 even though there are 577 deputes in the assemblee -
                      #but turns out there were 7 by-elections in 2023, so 7 old deputes and 7 new ones, meaning a total of 591 deputes
@@ -138,23 +136,6 @@ print(len(G.nodes))  #erm, slighty concerning that the number of nodes is 589 ev
 
 print(len(G.edges))
 
-print(list(G.edges.data()))
+nx.write_gexf(G, "network_17_18.gexf")
 
-Jio = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Jiovanny William']
-Jer = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Jérémie Iordanoff']
-Lis = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Lisa Belluco']
-Adr = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Adrien Quatennens']
-Bor = [aid for aid, at in G.nodes(data = True) if at["name"] == 'Boris Vallaud']
-
-print("Jiovanny William: ", Jio)
-print("Party ", G.nodes[Jio[0]]["main_party"])
-print("Jérémie Iordanoff: ", Jer)
-print("Party ", G.nodes[Jer[0]]["main_party"])
-print("Lisa Belluco: ", Lis)
-print("Party ", G.nodes[Lis[0]]["main_party"])
-print("Adrien Quatennens: ", Adr)
-print("Party ", G.nodes[Adr[0]]["main_party"])
-print("Boris Vallaud: ", Bor)
-print("Party ", G.nodes[Bor[0]]["main_party"])
-
-nx.write_gexf(G, "network.gexf")
+#only 470 bills in 2021/2022?
